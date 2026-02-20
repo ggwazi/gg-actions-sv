@@ -1,0 +1,85 @@
+name: Auto PR
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+      - 'fix/**'
+      - 'chore/**'
+      - 'docs/**'
+      - 'refactor/**'
+      - 'perf/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  auto-pr:
+    name: Create PR if none exists
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create Pull Request
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Check if a PR already exists for this branch
+            const { data: existingPRs } = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${branch}`,
+              state: 'open',
+            });
+
+            if (existingPRs.length > 0) {
+              console.log(`PR already exists: ${existingPRs[0].html_url}`);
+              return;
+            }
+
+            // Derive a human-readable title from the branch name
+            const title = branch
+              .replace(/^(feature|fix|chore|docs|refactor|perf)\//, '')
+              .replace(/[-_]/g, ' ');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner,
+              repo,
+              title,
+              head: branch,
+              base: 'main',
+              body: [
+                '## Summary',
+                `Automated PR created from branch \`${branch}\`.`,
+                '',
+                '### Changes',
+                '<!-- Describe your changes here -->',
+                '',
+                '### Checklist',
+                '- [ ] Tests pass',
+                '- [ ] Code is linted',
+                '- [ ] Build succeeds',
+                '',
+                '---',
+                '> This PR was created automatically by the **Auto PR** workflow.',
+              ].join('\n'),
+              draft: false,
+            });
+
+            // Label the PR so auto-merge picks it up
+            await github.rest.issues.addLabels({
+              owner,
+              repo,
+              issue_number: pr.number,
+              labels: ['auto-pr'],
+            });
+
+            console.log(`Created PR #${pr.number}: ${pr.html_url}`);

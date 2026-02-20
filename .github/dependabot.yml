@@ -1,0 +1,47 @@
+version: 2
+
+updates:
+  # Maintain npm dependencies
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: UTC
+    open-pull-requests-limit: 10
+    reviewers: []
+    assignees: []
+    labels:
+      - dependencies
+      - auto-pr
+    commit-message:
+      prefix: 'chore(deps)'
+    groups:
+      svelte:
+        patterns:
+          - 'svelte'
+          - '@sveltejs/*'
+      vite:
+        patterns:
+          - 'vite'
+          - '@vitejs/*'
+      typescript:
+        patterns:
+          - 'typescript'
+          - '@types/*'
+
+  # Maintain GitHub Actions dependencies
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: UTC
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - auto-pr
+    commit-message:
+      prefix: 'chore(actions)'
